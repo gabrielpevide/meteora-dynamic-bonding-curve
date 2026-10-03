@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* Faceted Terminal: ink ground, ice for actions, amber for locks and targets. */
+:root {
+  --ink: #090c12;
+  --deep: #0b0f16;
+  --facet: #0c1119;
+  --surface: #0f141d;
+  --surface-2: #161d29;
+  --field: #0a0f16;
+  --rule: #1a2332;
+  --line: #1e2838;
+  --line-strong: #2a3850;
+  --text: #e9eef5;
+  --text-2: #b4bfce;
+  --body: #9aa6b8;
+  --muted: #8e9aad;
+  --faint: #7c899d;
+  --ice: #8fe3ff;
+  --ice-hover: #c9f3ff;
+  --ice-ink: #071018;
+  --ice-line: #24505f;
+  --ice-wash: #0d1720;
+  --amber: #ffb547;
+  --amber-ink: #120c02;
+  --amber-line: #5a4220;
+  --amber-wash: #15120c;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-deep: var(--deep);
+  --color-facet: var(--facet);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-field: var(--field);
+  --color-rule: var(--rule);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-ice: var(--ice);
+  --color-ice-hover: var(--ice-hover);
+  --color-ice-ink: var(--ice-ink);
+  --color-ice-line: var(--ice-line);
+  --color-ice-wash: var(--ice-wash);
+  --color-amber: var(--amber);
+  --color-amber-ink: var(--amber-ink);
+  --color-amber-line: var(--amber-line);
+  --color-amber-wash: var(--amber-wash);
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-chakra), system-ui, sans-serif;
+}
+
+body {
+  background: var(--ink);
+  color: var(--text);
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 5.5vw, 80px);
+  box-sizing: border-box;
+}
+
+/* Cut-gem corners */
+@utility facet-btn {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+@utility facet-btn-sm {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+@utility facet-card {
+  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%);
+}
+@utility facet-card-sm {
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%);
+}
+@utility hex {
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+@utility facet-bg {
+  clip-path: polygon(32% 0, 100% 20%, 100% 80%, 56% 100%, 0 62%);
+}
+
+/* Wallet adapter button, restyled to match */
+.wallet-adapter-button-trigger {
+  height: 44px !important;
+  border-radius: 0 !important;
+  background: var(--ice) !important;
+  color: var(--ice-ink) !important;
+  font-family: var(--font-chakra), sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+.wallet-adapter-modal-wrapper {
+  background: var(--surface) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-plex-sans), sans-serif !important;
+}
+.wallet-adapter-dropdown-list {
+  background: var(--surface) !important;
+  border-radius: 0 !important;
+}
