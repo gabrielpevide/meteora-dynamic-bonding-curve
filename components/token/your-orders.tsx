@@ -12,7 +12,15 @@ import { cn } from "@/lib/utils";
 
 export type Order = WallEntry & { feeSol?: number };
 
-export function YourOrders(props: { orders: Order[]; refPrice: number; market: number; now: number; mint: string; onDone: () => void }) {
+export function YourOrders(props: {
+  orders: Order[];
+  rewards?: number;
+  refPrice: number;
+  market: number;
+  now: number;
+  mint: string;
+  onDone: () => void;
+}) {
   const { connection } = useConnection();
   const { send, status, publicKey } = useSend();
 
@@ -31,6 +39,12 @@ export function YourOrders(props: { orders: Order[]; refPrice: number; market: n
       </div>
       {!publicKey && <p className="text-sm text-body">Connect your wallet to see your orders.</p>}
       {publicKey && props.orders.length === 0 && <p className="text-sm text-body">You have no locked orders on this token.</p>}
+      {props.orders.length > 0 && (
+        <p className="flex flex-wrap items-baseline justify-between gap-2 border border-line bg-field px-[18px] py-3.5">
+          <span className="font-mono text-[11px] tracking-[0.14em] text-muted">REWARDS PAID TO YOU</span>
+          <span className="font-mono text-base">{props.rewards === undefined ? "—" : fmtSol(props.rewards)}</span>
+        </p>
+      )}
       {props.orders.map((o) => {
         const unlocked = props.now >= o.lockReleasePoint;
         const state =

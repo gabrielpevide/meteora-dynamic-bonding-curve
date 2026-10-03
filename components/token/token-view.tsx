@@ -8,6 +8,7 @@ import { marketPrice } from "@/lib/damm";
 import { convictionPool, convictionWall, positionFees, type WallEntry } from "@/lib/dlmm";
 import { fmtCompact, fmtCountdown, fmtDate, fmtMc, fmtNumber, fmtSol } from "@/lib/format";
 import { tokenMetadata } from "@/lib/metadata";
+import { rewardsPaid } from "@/lib/rewards";
 import { CurvePanel } from "@/components/token/curve-panel";
 import { LockForm } from "@/components/token/lock-form";
 import { PhaseStepper, type Phase } from "@/components/token/phase-stepper";
@@ -23,6 +24,7 @@ type Data = {
   pool: { opensAt: number; isOpen: boolean } | null;
   wall: WallEntry[];
   fees: Map<string, number>;
+  rewards?: number; // SOL paid to the connected wallet; undefined when unknown
   balance: number;
 };
 
@@ -32,12 +34,17 @@ async function load(conn: Connection, mint: PublicKey, owner: PublicKey | null):
   let pool: Data["pool"] = null;
   let wall: WallEntry[] = [];
   let fees = new Map<string, number>();
+  let rewards: number | undefined;
   if (curve?.graduated) {
     market = await marketPrice(conn, mint);
     const p = await convictionPool(conn, mint);
     if (p) {
       pool = { opensAt: p.opensAt, isOpen: p.isOpen };
-      [wall, fees] = await Promise.all([convictionWall(conn, p, market), owner ? positionFees(p, owner) : fees]);
+      [wall, fees, rewards] = await Promise.all([
+        convictionWall(conn, p, market),
+        owner ? positionFees(p, owner) : fees,
+        owner ? rewardsPaid(mint.toBase58(), owner.toBase58()).catch(() => undefined) : undefined,
+      ]);
     }
   }
   let balance = 0;
@@ -45,7 +52,7 @@ async function load(conn: Connection, mint: PublicKey, owner: PublicKey | null):
     const { value } = await conn.getParsedTokenAccountsByOwner(owner, { mint });
     balance = value.reduce((s, a) => s + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0);
   }
-  return { cfg, curve, market, pool, wall, fees, balance };
+  return { cfg, curve, market, pool, wall, fees, rewards, balance };
 }
 
 const FACTS = [
@@ -196,7 +203,7 @@ export function TokenView({ mint }: { mint: string }) {
         {phase === "open" && market !== null && (
           <>
             <Wall entries={wall} refPrice={refPrice} market={market} />
-            <YourOrders orders={mine} refPrice={refPrice} market={market} now={now} mint={mint} onDone={refresh} />
+            <YourOrders orders={mine} rewards={data.rewards} refPrice={refPrice} market={market} now={now} mint={mint} onDone={refresh} />
             <TradeBox mint={mint} symbol={symbol} venue="damm" balance={balance} onDone={refresh} />
           </>
         )}
