@@ -4,6 +4,8 @@ Conviction pools on Meteora. A token launches on a bonding curve. After it gradu
 
 Built for the Meteora "Best use of Dynamic Bonding Curve" track at the Colosseum Crypto World's Fair.
 
+Live on devnet: https://dhands-production.up.railway.app
+
 ## How it works
 
 | Phase | Meteora program | What happens |
@@ -37,7 +39,18 @@ Every launch uses one config, created in [`scripts/spike.mts`](scripts/spike.mts
 
 - At activation the locked orders go live. When the price reaches a range, the tokens sell for SOL and the position earns the swap fees.
 - A keeper calls `go_to_a_bin` to keep the DLMM active bin next to the DAMM v2 price, so a fill doesn't cross dozens of empty bins and pay the maximum fee. The SDK's `syncWithMarketPrice` passes a bin array that doesn't exist, so [`lib/dlmm.ts`](lib/dlmm.ts) builds the instruction by hand.
-- Rewards: platform fees (DBC partner fees and the partner LP position on DAMM v2) are paid in SOL to orders above the price, weighted by size and time. The snapshot and payout job is in progress.
+- Rewards: the platform's fees for each token (its share of the curve's trading fees and the fees on its locked LP in DAMM v2) are paid out in SOL once a day. An owner's share is their locked tokens above the price, summed over time. Orders that sold, unlocked or sit below the price stop earning.
+
+## Keeper
+
+[`scripts/keeper.mts`](scripts/keeper.mts) runs every 5 minutes and exits. For each launch on the config it:
+
+1. migrates a curve that reached its threshold into DAMM v2;
+2. creates the DLMM pool for a token that just graduated, opening 24 hours later (30 minutes on devnet). DLMM only lets a holder of the token create its pool, so the keeper buys a crumb first;
+3. calls `go_to_a_bin` once the pool is open;
+4. adds each owner's locked tokens above the price to their reward weight, and once a day claims the platform's fees and pays them out in SOL by weight.
+
+Its state lives in Supabase: `dh_rounds`, `dh_accruals` and `dh_payouts`, created by [`supabase/dh_rewards.sql`](supabase/dh_rewards.sql). Anyone can read them with the publishable key, and the token page shows each wallet its payouts. The keeper writes only through database functions that check its secret against a stored SHA-256 hash, so it holds no Supabase admin key.
 
 ## Devnet run
 
@@ -60,6 +73,20 @@ The whole lifecycle ran on devnet on October 1, 2026, with [`scripts/spike.mts`]
 
 Accounts: config `5WNhv4t2rvkkEmKjTZZWkKEU7GDqcWyaAA6cHZiQKKZN`, mint `EqayHr7zV7jSkwSfVQjFCzn3YiJUFk915ZYoR5jJapDe`, DAMM v2 pool `4PzDW4m8qxYDH6nkpCneMYqeAkYHQc7j5jEszFnxonNp`, DLMM pair `wALjjzyQH1LKXsijEo9YQg5ZStbqKvx1vBaHcvmSE2c`.
 
+### Keeper run
+
+On October 3 the keeper took mint `FmrzRagGCyRMfh4tK76EHQy91nnedF6GvxBXqiZvbbHJ` from a completed curve to a SOL payout. For this run the payout interval was 60 seconds instead of a day.
+
+| Step | Transaction |
+| --- | --- |
+| A buy completes the curve | [5PTrQ…xLAYvy](https://explorer.solana.com/tx/5PTrQ6LEcXGGGmeNeGhQ9TSyKLafft9oEXRxzRTCEkrsSMRj7gZSjDtVooa6pDjGtqeMy4kMvRWAcKi4U9xLAYvy?cluster=devnet) |
+| Keeper: graduate to DAMM v2 | [4mS99…f8xhkT](https://explorer.solana.com/tx/4mS99eUKe7Ct6t6tGFgUf5Y94AxDZmD6w8nKP22k89Zyt7o6GajzNJiCygBtYw9R81ZtN2tMb3hYHiEG5Yf8xhkT?cluster=devnet) |
+| Keeper: create the DLMM pool, opening 30 minutes later | [2SQ6V…v6DxFyd](https://explorer.solana.com/tx/2SQ6VFpnTq3FCm8cJB1GKrbv94UXd78oEszh55a2TiMDSqXqZ4PUZvUrNwtDSLzhEFBdqFkYuWxnc57s2v6DxFyd?cluster=devnet) |
+| One wallet locks 100M tokens at 2x | [2qHVz…NkAqPkaxS](https://explorer.solana.com/tx/2qHVzpKmYfqhvrjguXV7Rj3pBC55UFuWTwufqBMzboambRPe2xwZ5cdSUMsaQDYA5sDHntf7ygiQ4LZNkAqPkaxS?cluster=devnet), [5N843…wvineJmn](https://explorer.solana.com/tx/5N843fAX1qKot1bZCaBbCc8Ew1xMEppQPNk3BFsBnC8Tm89FbkVM68WhqhbShJEfb3G1xuR9Vz47GGT4wvineJmn?cluster=devnet) |
+| Another wallet locks 60M tokens at 3x | [4j3R7…5UBy6EE2](https://explorer.solana.com/tx/4j3R7n2GW8aDCXaJGu8jaNtDBsvWvmDpU7G7N5HC9oyCt3a6ATHJQzLk7G4DkNyPBiQBZxWLe9ptw9pb5UBy6EE2?cluster=devnet), [2qYw6…DoxkBskX](https://explorer.solana.com/tx/2qYw6BoXMxKLkk9uCoFuBFF95v66ngQcJAg3xjTPYaX2PPjhfPf8XijS9k1HknzsQ8KzyNCiSHB1qoWuDoxkBskX?cluster=devnet) |
+| Keeper: claim the platform's share of the curve fees | [2yEzj…G5syqar](https://explorer.solana.com/tx/2yEzjQyx9dkitArBzzgFgH537beHbefXKezgiy1FmigYvmn6kpJXfuhjes8t9GLtKt4c72tfU6xErAxEiG5syqar?cluster=devnet) |
+| Keeper: pay both wallets by weight, 0.0023 and 0.0014 SOL (100M vs 60M tokens above the price) | [48R1a…WzUHmxbT](https://explorer.solana.com/tx/48R1aCNnjgbSztZVKWrf1zEKDk2npMuK4mG6qZ46JCqBot5Q82ypjZ9xPr1G156zzTU7FTDmiCvXjmsrWzUHmxbT?cluster=devnet) |
+
 ## Code map
 
 - [`app/`](app): Next.js 16 pages. Home, `/t/[mint]` (token page in every phase), `/launch`, and `/api/metadata`.
@@ -67,7 +94,10 @@ Accounts: config `5WNhv4t2rvkkEmKjTZZWkKEU7GDqcWyaAA6cHZiQKKZN`, mint `EqayHr7zV
 - [`lib/damm.ts`](lib/damm.ts): DAMM v2 price, quotes and swaps.
 - [`lib/dlmm.ts`](lib/dlmm.ts): conviction pool, locks, the wall scan, withdrawals and the keeper instruction.
 - [`lib/launches.ts`](lib/launches.ts): the token list on the home page.
-- [`scripts/`](scripts): the devnet end-to-end run.
+- [`lib/rewards.ts`](lib/rewards.ts): reads payouts from Supabase.
+- [`scripts/keeper.mts`](scripts/keeper.mts): the keeper.
+- [`scripts/spike.mts`](scripts/spike.mts), [`scripts/conviction.mts`](scripts/conviction.mts): the first devnet end-to-end run.
+- [`supabase/dh_rewards.sql`](supabase/dh_rewards.sql): tables and write functions for rewards.
 
 ## Run it
 
@@ -84,6 +114,13 @@ Optional `.env.local`:
 - `NEXT_PUBLIC_CLUSTER`: `devnet` (default) or `mainnet-beta`.
 - `NEXT_PUBLIC_RPC_URL`: the public devnet RPC rate-limits the conviction wall scan; use a dedicated RPC.
 - `NEXT_PUBLIC_DBC_CONFIG`: launch config address. Defaults to the devnet config above.
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY`: the Supabase project and its publishable key, for rewards.
+
+The keeper also needs `KEEPER_KEY` (the launch config's fee claimer, as a JSON secret key array) and `KEEPER_DB_SECRET`:
+
+```bash
+node --env-file=.env.local --import tsx scripts/keeper.mts
+```
 
 To repeat the devnet run, fund the wallet the first command prints, then go step by step:
 
@@ -101,11 +138,11 @@ The scripts keep keypairs in `.keys/`, which is git-ignored. This repository con
 
 ## Status
 
-Working on devnet: launch, curve trading with live quotes, graduation into compounding DAMM v2, the conviction round with on-chain locks, fills through the locked orders, and withdrawal after unlock.
+Working on devnet: launch, curve trading with live quotes, graduation into compounding DAMM v2, the conviction round with on-chain locks, fills through the locked orders, withdrawal after unlock, and the keeper with SOL rewards.
 
 Next:
 
-- Rewards: snapshots of orders above the price, and daily SOL payouts from platform fees.
-- Image upload for launches. Today the launch form takes an image link and serves the metadata from the URI itself.
 - Mainnet launch config.
+- An RPC route on the server for mainnet, so the RPC key stays out of the browser. The public mainnet RPC won't serve the wall scan.
+- Image upload for launches. Today the launch form takes an image link and serves the metadata from the URI itself.
 - Holders who arrive after the round: DLMM limit orders, where cancelling before the deadline forfeits the accrued rewards.
