@@ -39,7 +39,7 @@ Every launch uses one config, created in [`scripts/spike.mts`](scripts/spike.mts
 
 - At activation the locked orders go live. When the price reaches a range, the tokens sell for SOL and the position earns the swap fees.
 - A keeper calls `go_to_a_bin` to keep the DLMM active bin next to the DAMM v2 price, so a fill doesn't cross dozens of empty bins and pay the maximum fee. The SDK's `syncWithMarketPrice` passes a bin array that doesn't exist, so [`lib/dlmm.ts`](lib/dlmm.ts) builds the instruction by hand.
-- Rewards: the platform's fees for each token (its share of the curve's trading fees and the fees on its locked LP in DAMM v2) are paid out in SOL once a day. An owner's share is their locked tokens above the price, summed over time. Orders that sold, unlocked or sit below the price stop earning.
+- Rewards: the platform's fees for each token (its share of the curve's trading fees and the fees on its locked LP in DAMM v2) are paid out in SOL once a day. An owner's share is their locked tokens above the price, summed over time. Orders that sold, unlocked or sit below the price stop earning. Fees that arrive after every lock on a token has expired stay with the platform.
 
 ## Keeper
 
