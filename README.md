@@ -6,6 +6,8 @@ Built for the Meteora "Best use of Dynamic Bonding Curve" track at the Colosseum
 
 Live on devnet: https://dhands-production.up.railway.app
 
+Video, 2 minutes: https://youtu.be/T0QI10-v3R8
+
 ## How it works
 
 | Phase | Meteora program | What happens |
