@@ -45,3 +45,6 @@ next-env.d.ts
 
 # local tooling
 /.claude/
+
+# demo video (Remotion project, rendered locally)
+/video/
